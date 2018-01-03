@@ -99,21 +99,16 @@ namespace ResxResolver
         {
             try
             {
+                int duplicates = 0;
+
                 XmlDocument xmlDocument = new XmlDocument();
                 xmlDocument.Load(fileInfo.FullName);
 
                 SortedList<string, XmlNode> currentResources = new SortedList<string, XmlNode>();
 
                 XmlNodeList resourceNodes = xmlDocument.SelectNodes("//data[@name]");
-
-                int numberOfResources = 0;
-
                 if (resourceNodes != null)
                 {
-                    numberOfResources = resourceNodes.Count;
-
-                    Console.WriteLine($"Searching {numberOfResources} resources in '{fileInfo.FullName}'.");
-
                     foreach (XmlNode resource in resourceNodes)
                     {
                         if (resource.Attributes != null)
@@ -129,6 +124,7 @@ namespace ResxResolver
                             }
                             else
                             {
+                                duplicates++;
                                 Console.WriteLine(
                                     $"Duplicate resource '{resourceName}' removed from '{fileInfo.FullName}'.");
                             }
@@ -144,6 +140,9 @@ namespace ResxResolver
                 }
 
                 xmlDocument.Save(fileInfo.FullName);
+
+                    Console.WriteLine(
+                        $"Removed {duplicates} duplicate resources from '{fileInfo.FullName}'.");
             }
             catch (Exception)
             {
