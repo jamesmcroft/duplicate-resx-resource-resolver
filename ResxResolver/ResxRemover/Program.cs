@@ -3,11 +3,11 @@
 //   Copyright (c) James Croft.
 // </copyright>
 // <summary>
-//   Defines the console application which resolves conflicting duplicate resource files in RESW and RESX files.
+//   Defines the console application which removes string resources by their name from files in RESW and RESX files.
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ResxResolver
+namespace ResxRemover
 {
     using System;
     using System.Collections.Generic;
@@ -19,13 +19,10 @@ namespace ResxResolver
     using WinUX;
 
     /// <summary>
-    /// Defines the console application which resolves conflicting duplicate resource files in RESW and RESX files.
+    /// Defines the console application which removes string resources by their name from files in RESW and RESX files.
     /// </summary>
     public class Program
     {
-        private static readonly Dictionary<FileSystemInfo, SortedList<string, XmlNode>> allResources =
-            new Dictionary<FileSystemInfo, SortedList<string, XmlNode>>();
-
         /// <summary>
         /// Main entry point.
         /// </summary>
@@ -34,19 +31,28 @@ namespace ResxResolver
         /// </param>
         public static void Main(string[] args)
         {
-            if (args.Length < 1)
+            if (args.Length < 2)
             {
-                Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources, e.g. ResxResolver.exe \"C:\\Resources\\\".");
+                Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
                 return;
             }
 
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
+            string resourceName = string.Empty;
+
             try
             {
                 DirectoryInfo rootDirectory = new DirectoryInfo(args[0]);
+                resourceName = args[1];
 
-                Console.WriteLine($"Resolving duplicate resources for resource files in '{rootDirectory.FullName}'.");
+                if (string.IsNullOrWhiteSpace(resourceName))
+                {
+                    Console.WriteLine("Cannot remove a resource name which is null or empty.");
+                    return;
+                }
+
+                Console.WriteLine($"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
 
                 GetResourcesFromDirectory(rootDirectory, resourceFiles);
             }
@@ -55,38 +61,14 @@ namespace ResxResolver
                 // ToDo
             }
 
-            Console.WriteLine($"Attempting to remove duplicate resources in {resourceFiles.Count} files.");
+            Console.WriteLine($"Attempting to remove {resourceName} from {resourceFiles.Count} files.");
 
             foreach (FileInfo resourceFile in resourceFiles)
             {
-                RemoveDuplicateResourcesInFile(resourceFile);
+                RemoveResourceFromFile(resourceFile, resourceName);
             }
-
-            CompareDuplicateResourcesAcrossFiles(allResources);
 
             Console.WriteLine("Completed");
-        }
-
-        private static void CompareDuplicateResourcesAcrossFiles(
-            Dictionary<FileSystemInfo, SortedList<string, XmlNode>> all)
-        {
-            if (all != null)
-            {
-                IEnumerable<string> resourceNames = all.SelectMany(x => x.Value.Keys);
-                IEnumerable<string> duplicateResources = resourceNames.GroupBy(x => x).Where(g => g.Count() > 1)
-                    .SelectMany(r => r).Distinct();
-
-                foreach (string dup in duplicateResources)
-                {
-                    IEnumerable<KeyValuePair<FileSystemInfo, SortedList<string, XmlNode>>> duplicates =
-                        all.Where(x => x.Value.Keys.Contains(dup));
-
-                    foreach (KeyValuePair<FileSystemInfo, SortedList<string, XmlNode>> duplicate in duplicates)
-                    {
-                        Console.WriteLine($"Duplicate resource '{dup}' found in '{duplicate.Key.FullName}'.");
-                    }
-                }
-            }
         }
 
         private static void GetResourcesFromDirectory(DirectoryInfo directoryInfo, List<FileInfo> resourceFiles)
@@ -126,12 +108,10 @@ namespace ResxResolver
             }
         }
 
-        private static void RemoveDuplicateResourcesInFile(FileSystemInfo fileInfo)
+        private static void RemoveResourceFromFile(FileSystemInfo fileInfo, string resourceToRemove)
         {
             try
             {
-                int duplicates = 0;
-
                 XmlDocument xmlDocument = new XmlDocument();
                 xmlDocument.Load(fileInfo.FullName);
 
@@ -146,18 +126,13 @@ namespace ResxResolver
                         {
                             string resourceName = resource.Attributes["name"].Value;
 
-                            KeyValuePair<string, XmlNode> existingResource = currentResources.FirstOrDefault(
-                                x => x.Key.Equals(resourceName, StringComparison.CurrentCultureIgnoreCase));
-
-                            if (existingResource.Value == null)
+                            if (!resourceName.Equals(resourceToRemove, StringComparison.CurrentCultureIgnoreCase))
                             {
                                 currentResources.Add(resourceName, resource);
                             }
                             else
                             {
-                                duplicates++;
-                                Console.WriteLine(
-                                    $"Duplicate resource '{resourceName}' removed from '{fileInfo.FullName}'.");
+                                Console.WriteLine($"Removed {resourceToRemove} from '{fileInfo.FullName}'.");
                             }
                         }
 
@@ -165,16 +140,12 @@ namespace ResxResolver
                     }
                 }
 
-                allResources.Add(fileInfo, currentResources);
-
                 foreach (string resourceKey in currentResources.Keys)
                 {
                     xmlDocument.DocumentElement?.AppendChild(currentResources[resourceKey]);
                 }
 
                 xmlDocument.Save(fileInfo.FullName);
-
-                Console.WriteLine($"Removed {duplicates} duplicate resources from '{fileInfo.FullName}'.");
             }
             catch (Exception e)
             {
