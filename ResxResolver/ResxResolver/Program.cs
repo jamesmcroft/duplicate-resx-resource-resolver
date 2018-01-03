@@ -16,6 +16,8 @@ namespace ResxResolver
     using System.Linq;
     using System.Xml;
 
+    using ResxCommon;
+
     using WinUX;
 
     /// <summary>
@@ -40,6 +42,8 @@ namespace ResxResolver
                 return;
             }
 
+            ConsoleHelper.StartFileLogging();
+
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
             try
@@ -63,6 +67,8 @@ namespace ResxResolver
             }
 
             CompareDuplicateResourcesAcrossFiles(allResources);
+
+            ConsoleHelper.StopFileLogging();
 
             Console.WriteLine("Completed");
         }

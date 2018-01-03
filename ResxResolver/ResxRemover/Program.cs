@@ -16,6 +16,8 @@ namespace ResxRemover
     using System.Linq;
     using System.Xml;
 
+    using ResxCommon;
+
     using WinUX;
 
     /// <summary>
@@ -36,6 +38,8 @@ namespace ResxRemover
                 Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
                 return;
             }
+
+            ConsoleHelper.StartFileLogging();
 
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
@@ -67,6 +71,8 @@ namespace ResxRemover
             {
                 RemoveResourceFromFile(resourceFile, resourceName);
             }
+
+            ConsoleHelper.StopFileLogging();
 
             Console.WriteLine("Completed");
         }
