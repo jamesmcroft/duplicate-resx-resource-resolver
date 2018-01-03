@@ -16,8 +16,6 @@ namespace ResxRemover
     using System.Linq;
     using System.Xml;
 
-    using ResxCommon;
-
     using WinUX;
 
     /// <summary>
@@ -43,6 +41,7 @@ namespace ResxRemover
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
             string resourceName = string.Empty;
+            string resourceFolderToKeep = string.Empty;
             bool includeContains = false;
 
             try
@@ -54,6 +53,11 @@ namespace ResxRemover
                 {
                     bool.TryParse(args[2], out includeContains);
                 }
+                else if (args.Length == 4)
+                {
+                    resourceFolderToKeep = args[2];
+                    bool.TryParse(args[3], out includeContains);
+                }
 
                 if (string.IsNullOrWhiteSpace(resourceName))
                 {
@@ -64,7 +68,7 @@ namespace ResxRemover
                 Console.WriteLine(
                     $"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
 
-                GetResourcesFromDirectory(rootDirectory, resourceFiles);
+                GetResourcesFromDirectory(rootDirectory, resourceFiles, resourceFolderToKeep);
             }
             catch (Exception)
             {
@@ -81,7 +85,10 @@ namespace ResxRemover
             Console.WriteLine("Completed");
         }
 
-        private static void GetResourcesFromDirectory(DirectoryInfo directoryInfo, List<FileInfo> resourceFiles)
+        private static void GetResourcesFromDirectory(
+            DirectoryInfo directoryInfo,
+            List<FileInfo> resourceFiles,
+            string resourceFolderToKeep)
         {
             if (resourceFiles == null)
             {
@@ -95,9 +102,15 @@ namespace ResxRemover
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(resourceFolderToKeep) && directoryInfo.Name.Equals(resourceFolderToKeep))
+            {
+                Console.WriteLine($"Not including {directoryInfo.FullName} in removal.");
+                return;
+            }
+
             try
             {
-                Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
+                //Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
 
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
@@ -105,7 +118,7 @@ namespace ResxRemover
                 {
                     foreach (DirectoryInfo directory in childDirectories)
                     {
-                        GetResourcesFromDirectory(directory, resourceFiles);
+                        GetResourcesFromDirectory(directory, resourceFiles, resourceFolderToKeep);
                     }
                 }
 

@@ -111,7 +111,7 @@ namespace ResxResolver
 
             try
             {
-                Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
+                //Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
 
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
