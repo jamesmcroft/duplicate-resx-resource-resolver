@@ -59,7 +59,7 @@ namespace ResxResolver
 
             foreach (FileInfo resourceFile in resourceFiles)
             {
-                RemoveDuplicateResourcesInFile(resourceFile);
+                RemoveUnnecessaryResources(resourceFile);
             }
 
             CompareDuplicateResourcesAcrossFiles(allResources);
@@ -126,7 +126,7 @@ namespace ResxResolver
             }
         }
 
-        private static void RemoveDuplicateResourcesInFile(FileSystemInfo fileInfo)
+        private static void RemoveUnnecessaryResources(FileSystemInfo fileInfo)
         {
             try
             {
@@ -151,7 +151,16 @@ namespace ResxResolver
 
                             if (existingResource.Value == null)
                             {
-                                currentResources.Add(resourceName, resource);
+                                // Resources which are in RESX that contain dots (not required).
+                                if (!fileInfo.Extension.Contains("resx") || !resourceName.Contains("."))
+                                {
+                                    currentResources.Add(resourceName, resource);
+                                }
+                                else
+                                {
+                                    Console.WriteLine(
+                                        $"Removing '{resourceName}' from '{fileInfo.FullName}'.");
+                                }
                             }
                             else
                             {
