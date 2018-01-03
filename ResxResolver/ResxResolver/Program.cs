@@ -1,9 +1,9 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="Program.cs" company="James Croft">
-//   Copyright (c) James Croft. 
+//   Copyright (c) James Croft.
 // </copyright>
 // <summary>
-//   Defines the Program type.
+//   Defines the console application which resolves conflicting duplicate resource files in RESW and RESX files.
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -11,12 +11,15 @@ namespace ResxResolver
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Xml;
 
+    using WinUX;
+
     /// <summary>
-    /// The resource resolver program.
+    /// Defines the console application which resolves conflicting duplicate resource files in RESW and RESX files.
     /// </summary>
     public class Program
     {
@@ -33,11 +36,14 @@ namespace ResxResolver
                 return;
             }
 
-            var resourceFiles = new List<FileInfo>();
+            List<FileInfo> resourceFiles = new List<FileInfo>();
 
             try
             {
-                var rootDirectory = new DirectoryInfo(args[0]);
+                DirectoryInfo rootDirectory = new DirectoryInfo(args[0]);
+
+                Console.WriteLine($"Resolving duplicate resources for resource files in '{rootDirectory.FullName}'.");
+
                 GetResourcesFromDirectory(rootDirectory, resourceFiles);
             }
             catch (Exception)
@@ -45,7 +51,9 @@ namespace ResxResolver
                 // ToDo
             }
 
-            foreach (var resourceFile in resourceFiles)
+            Console.WriteLine($"Attempting to remove duplicate resources in {resourceFiles.Count} files.");
+
+            foreach (FileInfo resourceFile in resourceFiles)
             {
                 RemoveDuplicateResourcesInFile(resourceFile);
             }
@@ -58,13 +66,21 @@ namespace ResxResolver
                 resourceFiles = new List<FileInfo>();
             }
 
+            // Ignore checking the obj or bin folders.
+            if (directoryInfo.FullName.Contains("\\obj\\", CompareOptions.IgnoreCase) || directoryInfo.FullName.Contains("\\bin\\", CompareOptions.IgnoreCase))
+            {
+                return;
+            }
+
             try
             {
-                var childDirectories = directoryInfo.GetDirectories().ToList();
+                Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
+
+                List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
                 if (childDirectories.Count > 0)
                 {
-                    foreach (var directory in childDirectories)
+                    foreach (DirectoryInfo directory in childDirectories)
                     {
                         GetResourcesFromDirectory(directory, resourceFiles);
                     }
@@ -79,26 +95,42 @@ namespace ResxResolver
             }
         }
 
-        private static void RemoveDuplicateResourcesInFile(FileSystemInfo fi)
+        private static void RemoveDuplicateResourcesInFile(FileSystemInfo fileInfo)
         {
             try
             {
-                var xmlDocument = new XmlDocument();
-                xmlDocument.Load(fi.FullName);
+                XmlDocument xmlDocument = new XmlDocument();
+                xmlDocument.Load(fileInfo.FullName);
 
-                var currentResources = new SortedList<string, XmlNode>();
+                SortedList<string, XmlNode> currentResources = new SortedList<string, XmlNode>();
 
-                var resourceNodes = xmlDocument.SelectNodes("//data[@name]");
+                XmlNodeList resourceNodes = xmlDocument.SelectNodes("//data[@name]");
+
+                int numberOfResources = 0;
+
                 if (resourceNodes != null)
                 {
+                    numberOfResources = resourceNodes.Count;
+
+                    Console.WriteLine($"Searching {numberOfResources} resources in '{fileInfo.FullName}'.");
+
                     foreach (XmlNode resource in resourceNodes)
                     {
                         if (resource.Attributes != null)
                         {
-                            var resourceName = resource.Attributes["name"].Value.ToLower();
-                            if (!currentResources.ContainsKey(resourceName))
+                            string resourceName = resource.Attributes["name"].Value;
+
+                            KeyValuePair<string, XmlNode> existingResource = currentResources.FirstOrDefault(
+                                x => x.Key.Equals(resourceName, StringComparison.CurrentCultureIgnoreCase));
+
+                            if (existingResource.Value == null)
                             {
                                 currentResources.Add(resourceName, resource);
+                            }
+                            else
+                            {
+                                Console.WriteLine(
+                                    $"Duplicate resource '{resourceName}' removed from '{fileInfo.FullName}'.");
                             }
                         }
 
@@ -106,12 +138,12 @@ namespace ResxResolver
                     }
                 }
 
-                foreach (var resourceKey in currentResources.Keys)
+                foreach (string resourceKey in currentResources.Keys)
                 {
                     xmlDocument.DocumentElement?.AppendChild(currentResources[resourceKey]);
                 }
 
-                xmlDocument.Save(fi.FullName);
+                xmlDocument.Save(fileInfo.FullName);
             }
             catch (Exception)
             {
