@@ -35,20 +35,25 @@ namespace ResxRemover
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
+                Console.WriteLine(
+                    "Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
                 return;
             }
-
-            ConsoleHelper.StartFileLogging();
 
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
             string resourceName = string.Empty;
+            bool includeContains = false;
 
             try
             {
                 DirectoryInfo rootDirectory = new DirectoryInfo(args[0]);
                 resourceName = args[1];
+
+                if (args.Length == 3)
+                {
+                    bool.TryParse(args[2], out includeContains);
+                }
 
                 if (string.IsNullOrWhiteSpace(resourceName))
                 {
@@ -56,7 +61,8 @@ namespace ResxRemover
                     return;
                 }
 
-                Console.WriteLine($"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
+                Console.WriteLine(
+                    $"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
 
                 GetResourcesFromDirectory(rootDirectory, resourceFiles);
             }
@@ -69,10 +75,8 @@ namespace ResxRemover
 
             foreach (FileInfo resourceFile in resourceFiles)
             {
-                RemoveResourceFromFile(resourceFile, resourceName);
+                RemoveResourceFromFile(resourceFile, resourceName, includeContains);
             }
-
-            ConsoleHelper.StopFileLogging();
 
             Console.WriteLine("Completed");
         }
@@ -114,7 +118,10 @@ namespace ResxRemover
             }
         }
 
-        private static void RemoveResourceFromFile(FileSystemInfo fileInfo, string resourceToRemove)
+        private static void RemoveResourceFromFile(
+            FileSystemInfo fileInfo,
+            string resourceToRemove,
+            bool includeContains)
         {
             try
             {
@@ -132,13 +139,16 @@ namespace ResxRemover
                         {
                             string resourceName = resource.Attributes["name"].Value;
 
-                            if (!resourceName.Equals(resourceToRemove, StringComparison.CurrentCultureIgnoreCase))
+                            if (!resourceName.Equals(resourceToRemove, StringComparison.CurrentCultureIgnoreCase)
+                                && (!includeContains || !resourceName.Contains(
+                                        resourceToRemove,
+                                        CompareOptions.IgnoreCase)))
                             {
                                 currentResources.Add(resourceName, resource);
                             }
                             else
                             {
-                                Console.WriteLine($"Removed {resourceToRemove} from '{fileInfo.FullName}'.");
+                                Console.WriteLine($"Removed {resourceName} from '{fileInfo.FullName}'.");
                             }
                         }
 
