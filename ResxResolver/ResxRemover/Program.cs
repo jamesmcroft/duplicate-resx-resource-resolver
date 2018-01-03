@@ -51,7 +51,12 @@ namespace ResxRemover
 
                 if (args.Length == 3)
                 {
-                    bool.TryParse(args[2], out includeContains);
+                    bool parsed = bool.TryParse(args[2], out includeContains);
+                    if (!parsed)
+                    {
+                        // Assume that the second parameter isn't an indicator as to whether to check contains and is the resource folder to keep.
+                        resourceFolderToKeep = args[2];
+                    }
                 }
                 else if (args.Length == 4)
                 {
