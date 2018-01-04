@@ -3,6 +3,8 @@
     using System;
     using System.IO;
 
+    using ResxCommon.Properties;
+
     public static class ConsoleHelper
     {
         private static FileStream fileStream;
@@ -18,33 +20,39 @@
 
         public static void StartFileLogging(string fileName)
         {
-            oldOut = Console.Out;
-
-            try
+            if (Settings.Default.UseFileCaching)
             {
-                fileStream = new FileStream($"./{fileName}.txt", FileMode.OpenOrCreate, FileAccess.Write);
-                writer = new StreamWriter(fileStream);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-                return;
-            }
+                oldOut = Console.Out;
 
-            Console.SetOut(writer);
+                try
+                {
+                    fileStream = new FileStream($"./{fileName}.txt", FileMode.OpenOrCreate, FileAccess.Write);
+                    writer = new StreamWriter(fileStream);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                    return;
+                }
+
+                Console.SetOut(writer);
+            }
         }
 
         public static void StopFileLogging()
         {
-            try
+            if (Settings.Default.UseFileCaching)
             {
-                Console.SetOut(oldOut);
-                writer.Close();
-                fileStream.Close();
-            }
-            catch (Exception)
-            {
-                // Ignored
+                try
+                {
+                    Console.SetOut(oldOut);
+                    writer.Close();
+                    fileStream.Close();
+                }
+                catch (Exception)
+                {
+                    // Ignored
+                }
             }
         }
     }

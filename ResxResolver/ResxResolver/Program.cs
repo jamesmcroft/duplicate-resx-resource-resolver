@@ -17,6 +17,7 @@ namespace ResxResolver
     using System.Xml;
 
     using ResxCommon;
+    using ResxCommon.Properties;
 
     using WinUX;
 
