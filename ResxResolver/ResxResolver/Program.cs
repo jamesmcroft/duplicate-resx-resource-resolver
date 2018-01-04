@@ -16,6 +16,8 @@ namespace ResxResolver
     using System.Linq;
     using System.Xml;
 
+    using ResxCommon;
+
     using WinUX;
 
     /// <summary>
@@ -23,7 +25,7 @@ namespace ResxResolver
     /// </summary>
     public class Program
     {
-        private static readonly Dictionary<FileSystemInfo, SortedList<string, XmlNode>> allResources =
+        private static readonly Dictionary<FileSystemInfo, SortedList<string, XmlNode>> AllResources =
             new Dictionary<FileSystemInfo, SortedList<string, XmlNode>>();
 
         /// <summary>
@@ -39,6 +41,8 @@ namespace ResxResolver
                 Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources, e.g. ResxResolver.exe \"C:\\Resources\\\".");
                 return;
             }
+
+            ConsoleHelper.StartFileLogging();
 
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
@@ -59,10 +63,12 @@ namespace ResxResolver
 
             foreach (FileInfo resourceFile in resourceFiles)
             {
-                RemoveDuplicateResourcesInFile(resourceFile);
+                RemoveUnnecessaryResources(resourceFile);
             }
 
-            CompareDuplicateResourcesAcrossFiles(allResources);
+            CompareDuplicateResourcesAcrossFiles(AllResources);
+
+            ConsoleHelper.StopFileLogging();
 
             Console.WriteLine("Completed");
         }
@@ -74,7 +80,7 @@ namespace ResxResolver
             {
                 IEnumerable<string> resourceNames = all.SelectMany(x => x.Value.Keys);
                 IEnumerable<string> duplicateResources = resourceNames.GroupBy(x => x).Where(g => g.Count() > 1)
-                    .SelectMany(r => r).Distinct();
+                    .SelectMany(r => r).Distinct().OrderBy(x => x);
 
                 foreach (string dup in duplicateResources)
                 {
@@ -105,8 +111,6 @@ namespace ResxResolver
 
             try
             {
-                Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
-
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
                 if (childDirectories.Count > 0)
@@ -126,7 +130,7 @@ namespace ResxResolver
             }
         }
 
-        private static void RemoveDuplicateResourcesInFile(FileSystemInfo fileInfo)
+        private static void RemoveUnnecessaryResources(FileSystemInfo fileInfo)
         {
             try
             {
@@ -151,7 +155,16 @@ namespace ResxResolver
 
                             if (existingResource.Value == null)
                             {
-                                currentResources.Add(resourceName, resource);
+                                // Resources which are in RESX that contain dots (not required).
+                                if (!fileInfo.Extension.Contains("resx") || !resourceName.Contains("."))
+                                {
+                                    currentResources.Add(resourceName, resource);
+                                }
+                                else
+                                {
+                                    Console.WriteLine(
+                                        $"Removing '{resourceName}' from '{fileInfo.FullName}'.");
+                                }
                             }
                             else
                             {
@@ -165,7 +178,7 @@ namespace ResxResolver
                     }
                 }
 
-                allResources.Add(fileInfo, currentResources);
+                AllResources.Add(fileInfo, currentResources);
 
                 foreach (string resourceKey in currentResources.Keys)
                 {

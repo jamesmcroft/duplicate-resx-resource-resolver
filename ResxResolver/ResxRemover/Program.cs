@@ -16,6 +16,8 @@ namespace ResxRemover
     using System.Linq;
     using System.Xml;
 
+    using ResxCommon;
+
     using WinUX;
 
     /// <summary>
@@ -33,18 +35,38 @@ namespace ResxRemover
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
+                Console.WriteLine(
+                    "Not enough information provided. Please provide the path to the folder containing resources and the resource name to remove, e.g. ResxRemover.exe \"C:\\Resources\\\" \"Resource1\".");
                 return;
             }
+
+            ConsoleHelper.StartFileLogging();
 
             List<FileInfo> resourceFiles = new List<FileInfo>();
 
             string resourceName = string.Empty;
+            string resourceFolderToKeep = string.Empty;
+            bool includeContains = false;
 
             try
             {
                 DirectoryInfo rootDirectory = new DirectoryInfo(args[0]);
                 resourceName = args[1];
+
+                if (args.Length == 3)
+                {
+                    bool parsed = bool.TryParse(args[2], out includeContains);
+                    if (!parsed)
+                    {
+                        // Assume that the second parameter isn't an indicator as to whether to check contains and is the resource folder to keep.
+                        resourceFolderToKeep = args[2];
+                    }
+                }
+                else if (args.Length == 4)
+                {
+                    resourceFolderToKeep = args[2];
+                    bool.TryParse(args[3], out includeContains);
+                }
 
                 if (string.IsNullOrWhiteSpace(resourceName))
                 {
@@ -52,9 +74,10 @@ namespace ResxRemover
                     return;
                 }
 
-                Console.WriteLine($"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
+                Console.WriteLine(
+                    $"Removing resource '{resourceName}' from resource files in '{rootDirectory.FullName}'.");
 
-                GetResourcesFromDirectory(rootDirectory, resourceFiles);
+                GetResourcesFromDirectory(rootDirectory, resourceFiles, resourceFolderToKeep);
             }
             catch (Exception)
             {
@@ -65,13 +88,18 @@ namespace ResxRemover
 
             foreach (FileInfo resourceFile in resourceFiles)
             {
-                RemoveResourceFromFile(resourceFile, resourceName);
+                RemoveResourceFromFile(resourceFile, resourceName, includeContains);
             }
+
+            ConsoleHelper.StopFileLogging();
 
             Console.WriteLine("Completed");
         }
 
-        private static void GetResourcesFromDirectory(DirectoryInfo directoryInfo, List<FileInfo> resourceFiles)
+        private static void GetResourcesFromDirectory(
+            DirectoryInfo directoryInfo,
+            List<FileInfo> resourceFiles,
+            string resourceFolderToKeep)
         {
             if (resourceFiles == null)
             {
@@ -85,17 +113,21 @@ namespace ResxRemover
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(resourceFolderToKeep) && directoryInfo.Name.Equals(resourceFolderToKeep))
+            {
+                Console.WriteLine($"Not including {directoryInfo.FullName} in removal.");
+                return;
+            }
+
             try
             {
-                Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
-
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
                 if (childDirectories.Count > 0)
                 {
                     foreach (DirectoryInfo directory in childDirectories)
                     {
-                        GetResourcesFromDirectory(directory, resourceFiles);
+                        GetResourcesFromDirectory(directory, resourceFiles, resourceFolderToKeep);
                     }
                 }
 
@@ -108,7 +140,10 @@ namespace ResxRemover
             }
         }
 
-        private static void RemoveResourceFromFile(FileSystemInfo fileInfo, string resourceToRemove)
+        private static void RemoveResourceFromFile(
+            FileSystemInfo fileInfo,
+            string resourceToRemove,
+            bool includeContains)
         {
             try
             {
@@ -126,13 +161,16 @@ namespace ResxRemover
                         {
                             string resourceName = resource.Attributes["name"].Value;
 
-                            if (!resourceName.Equals(resourceToRemove, StringComparison.CurrentCultureIgnoreCase))
+                            if (!resourceName.Equals(resourceToRemove, StringComparison.CurrentCultureIgnoreCase)
+                                && (!includeContains || !resourceName.Contains(
+                                        resourceToRemove,
+                                        CompareOptions.IgnoreCase)))
                             {
                                 currentResources.Add(resourceName, resource);
                             }
                             else
                             {
-                                Console.WriteLine($"Removed {resourceToRemove} from '{fileInfo.FullName}'.");
+                                Console.WriteLine($"Removed {resourceName} from '{fileInfo.FullName}'.");
                             }
                         }
 
