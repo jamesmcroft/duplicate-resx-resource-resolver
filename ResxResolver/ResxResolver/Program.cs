@@ -80,7 +80,7 @@ namespace ResxResolver
             {
                 IEnumerable<string> resourceNames = all.SelectMany(x => x.Value.Keys);
                 IEnumerable<string> duplicateResources = resourceNames.GroupBy(x => x).Where(g => g.Count() > 1)
-                    .SelectMany(r => r).Distinct();
+                    .SelectMany(r => r).Distinct().OrderBy(x => x);
 
                 foreach (string dup in duplicateResources)
                 {
