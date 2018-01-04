@@ -17,7 +17,6 @@ namespace ResxResolver
     using System.Xml;
 
     using ResxCommon;
-    using ResxCommon.Properties;
 
     using WinUX;
 
@@ -26,7 +25,7 @@ namespace ResxResolver
     /// </summary>
     public class Program
     {
-        private static readonly Dictionary<FileSystemInfo, SortedList<string, XmlNode>> allResources =
+        private static readonly Dictionary<FileSystemInfo, SortedList<string, XmlNode>> AllResources =
             new Dictionary<FileSystemInfo, SortedList<string, XmlNode>>();
 
         /// <summary>
@@ -67,7 +66,7 @@ namespace ResxResolver
                 RemoveUnnecessaryResources(resourceFile);
             }
 
-            CompareDuplicateResourcesAcrossFiles(allResources);
+            CompareDuplicateResourcesAcrossFiles(AllResources);
 
             ConsoleHelper.StopFileLogging();
 
@@ -112,8 +111,6 @@ namespace ResxResolver
 
             try
             {
-                //Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
-
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
                 if (childDirectories.Count > 0)
@@ -181,7 +178,7 @@ namespace ResxResolver
                     }
                 }
 
-                allResources.Add(fileInfo, currentResources);
+                AllResources.Add(fileInfo, currentResources);
 
                 foreach (string resourceKey in currentResources.Keys)
                 {

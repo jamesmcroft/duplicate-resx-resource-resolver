@@ -121,8 +121,6 @@ namespace ResxRemover
 
             try
             {
-                //Console.WriteLine($"Looking for resource files in '{directoryInfo.FullName}'.");
-
                 List<DirectoryInfo> childDirectories = directoryInfo.GetDirectories().ToList();
 
                 if (childDirectories.Count > 0)
